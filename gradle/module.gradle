@@ -1,0 +1,64 @@
+apply plugin: "java-library"
+apply plugin: "maven-publish"
+
+jar {
+	manifest.attributes["Implementation-Title"] = project.name
+	manifest.attributes["Implementation-Version"] = project.version
+	manifest.attributes["Automatic-Module-Name"] = project.name.replace('-', '.')
+	manifest.attributes["Created-By"] =
+		"${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})"
+}
+
+javadoc {
+	description = "Generates project-level javadoc for use in -javadoc jar"
+	options.encoding = "UTF-8"
+	options.memberLevel = JavadocMemberLevel.PROTECTED
+	options.author = false
+	options.header = project.name
+	options.use = false
+	options.setOutputLevel(JavadocOutputLevel.QUIET)
+	options.addBooleanOption("Xdoclint:syntax", true)
+	logging.captureStandardError LogLevel.INFO
+	logging.captureStandardOutput LogLevel.INFO
+}
+
+tasks.register("sourcesJar", Jar) {
+	dependsOn classes
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	archiveClassifier.set("sources")
+	from sourceSets.main.allSource
+}
+
+tasks.register("javadocJar", Jar) {
+	archiveClassifier.set("javadoc")
+	from javadoc
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+			artifact sourcesJar
+			artifact javadocJar
+			versionMapping {
+				usage('java-api') {
+					fromResolutionOf('runtimeClasspath')
+				}
+				usage('java-runtime') {
+					fromResolutionResult()
+				}
+			}
+		}
+	}
+	repositories {
+		maven {
+			url publishUrl
+			allowInsecureProtocol = true
+			credentials {
+				username publishUsername
+				password publishPassword
+			}
+		}
+	}
+}
+

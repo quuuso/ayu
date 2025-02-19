@@ -1,0 +1,41 @@
+plugins {
+
+}
+
+ext {
+	javaProjects = subprojects.findAll { !it.name.startsWith("framework-") }
+}
+
+configure(allprojects) { project ->
+	configurations.configureEach {
+		resolutionStrategy {
+			cacheChangingModulesFor 0, "seconds"
+			cacheDynamicVersionsFor 0, "seconds"
+		}
+	}
+}
+
+configure(allprojects - project(":framework-platform")) {
+	configurations {
+		dependencyManagement {
+			canBeConsumed = false
+			canBeResolved = false
+			visible = false
+		}
+		matching { it.name.endsWith("Classpath") }.configureEach { it.extendsFrom(dependencyManagement) }
+	}
+	dependencies {
+		dependencyManagement(enforcedPlatform(dependencies.project(path: ":framework-platform")))
+	}
+}
+
+configure([rootProject] + javaProjects) { project ->
+	apply plugin: "java"
+	dependencies {
+
+	}
+}
+
+configure(javaProjects) { project ->
+	apply from: "${rootDir}/gradle/module.gradle"
+}
